@@ -1,10 +1,11 @@
 <?php
 
 require __DIR__ . '/../vendor/autoload.php';
-include_once "Api.php";
-include_once "Crate.php";
+include_once "Utils/Api.php";
+include_once "Utils/Crate.php";
 
 use Ramsey\Uuid\Uuid;
+use Vanilor\SiccApi\Utils\Api;
 
 if(!isset($_GET["id"]))
 {

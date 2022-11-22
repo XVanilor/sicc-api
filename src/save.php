@@ -1,8 +1,10 @@
 <?php
 
+use Vanilor\SiccApi\Utils\Api;
+
 require __DIR__ . '/../vendor/autoload.php';
-include_once "Api.php";
-include_once "Crate.php";
+include_once "Utils/Api.php";
+include_once "Utils/Crate.php";
 
 if($_SERVER['REQUEST_METHOD'] !== "POST")
    exit();
