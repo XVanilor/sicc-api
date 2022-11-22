@@ -26,8 +26,8 @@ if (!isset($private_token) || !is_string($private_token) || !Uuid::isValid($priv
 $user = [
     "uuid" => Uuid::uuid4()->toString(),
     "name" => $body["username"] ?? null,
-    "privateApiToken" => $private_token,
-    "publicApiToken" => $body["publicApiToken"] ?? null
+    "apiKey" => $private_token,
+    "enrollmentToken" => $body["publicApiToken"] ?? null
 ];
 
 $user = User::fromJson($user);
