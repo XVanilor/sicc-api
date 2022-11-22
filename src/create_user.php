@@ -27,7 +27,7 @@ $user = [
     "uuid" => Uuid::uuid4()->toString(),
     "name" => $body["username"] ?? null,
     "apiKey" => $private_token,
-    "enrollmentToken" => $body["publicApiToken"] ?? null
+    "enrollmentToken" => $body["enrollmentToken"] ?? null
 ];
 
 $user = User::fromJson($user);
