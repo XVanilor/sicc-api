@@ -3,6 +3,8 @@
 include_once 'DB.php';
 
 use Ramsey\Uuid\Uuid;
+use Vanilor\SiccApi\Utils\Api;
+use Vanilor\SiccApi\Utils\DB;
 
 class Item
 {

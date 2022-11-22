@@ -1,6 +1,6 @@
 <?php
 
-namespace Vanilor\SiccApi;
+namespace Vanilor\SiccApi\Utils;
 
 class Log
 {
