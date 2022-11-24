@@ -7,27 +7,28 @@ include_once "Utils/User.php";
 
 use Ramsey\Uuid\Uuid;
 use Vanilor\SiccApi\Utils\Api;
+use Vanilor\SiccApi\Utils\Token;
 use Vanilor\SiccApi\Utils\User;
-
 
 if ($_SERVER['REQUEST_METHOD'] !== "POST")
     exit();
 
 $body = json_decode(file_get_contents('php://input'), true);
-$private_token = $_SERVER["HTTP_X_API_TOKEN"] ?? null;
+$enrollmentToken = $_SERVER["HTTP_X_ENROLLMENT_TOKEN"] ?? null;
 
-if (!isset($private_token) || !is_string($private_token) || !Uuid::isValid($private_token) ||
+if (!isset($enrollmentToken) || !is_string($enrollmentToken) || !Uuid::isValid($enrollmentToken) ||
     $body === null ||
-    !User::exists($private_token)
-) {
-    return Api::response(404, ["success" => false]);
+    !User::exists($enrollmentToken, Token::ENROLLMENT_TOKEN)
+)
+{
+    return Api::response(401, ["success" => false, "data" => "Invalid enrollment token"]);
 }
 
 $user = [
     "uuid" => Uuid::uuid4()->toString(),
     "name" => $body["username"] ?? null,
-    "apiKey" => $private_token,
-    "enrollmentToken" => $body["enrollmentToken"] ?? null
+    "apiKey" => Uuid::uuid4()->toString(),
+    "enrollmentToken" => Uuid::uuid4()->toString()
 ];
 
 $user = User::fromJson($user);
@@ -35,4 +36,4 @@ if (!$user)
     return Api::response(400, "Missing some JSON fields. Please refer to documentation for correct usage");
 
 $user->save();
-return Api::response(201, ["success" => true]);
+return Api::response(201, ["success" => true, "data" => $user->toJson()]);

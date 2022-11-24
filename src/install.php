@@ -50,4 +50,4 @@ $stmt->bindValue(":api_key", $admin_private_key, SQLITE3_TEXT);
 $stmt->execute();
 $db->commit();
 
-return Api::response(201, ["success" => true, "your_api_token" => $admin_private_key]);
+return Api::response(201, ["success" => true, "data" => ["your_api_token" => $admin_private_key]]);

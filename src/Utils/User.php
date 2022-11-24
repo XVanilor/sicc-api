@@ -4,6 +4,11 @@ namespace Vanilor\SiccApi\Utils;
 
 use Ramsey\Uuid\Uuid;
 
+class Token {
+    const API_KEY = "apiKey";
+    const ENROLLMENT_TOKEN = "enrollmentToken";
+}
+
 class User
 {
 
@@ -12,33 +17,28 @@ class User
     public string $apiKey;
     public string $enrollmentToken;
 
-    public static function exists(string $token): bool
+    public static function exists(string $token, string $token_type): bool
     {
         if(!Uuid::isValid($token))
             return false;
 
         $db = DB::instance();
-        $stmt = $db->prepare("SELECT uuid FROM user WHERE api_key = :key");
-        $stmt->bindValue(":key", $token, SQLITE3_TEXT);
+
+        switch($token_type)
+        {
+            case Token::ENROLLMENT_TOKEN:
+                $sql = "SELECT uuid FROM user WHERE enrollment_token = :token";
+                break;
+            case Token::API_KEY:
+            default:
+                $sql = "SELECT uuid FROM user WHERE api_key = :token";
+                break;
+        }
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(":token", $token, SQLITE3_TEXT);
         $stmt->execute();
 
         return !empty($stmt->fetchAll());
-    }
-
-    public static function isRegistered(string $token): bool
-    {
-        if(!Uuid::isValid($token))
-            return false;
-
-        $db = DB::instance();
-        $stmt = $db->prepare("SELECT uuid, enrollment_token FROM user WHERE api_key = :key");
-        $stmt->bindValue(":key", $token, SQLITE3_TEXT);
-        $stmt->execute();
-
-        $userMeta = $stmt->fetchAll();
-        if(!empty($userMeta) && Uuid::isValid($userMeta[0]["public_api_key"]))
-            return true;
-        return false;
     }
 
     public static function fromJson(array $json): ?User
@@ -60,6 +60,16 @@ class User
         $user->apiKey = $json["apiKey"];
 
         return $user;
+    }
+
+    public function toJson(): array
+    {
+        return [
+            'uuid'              => $this->uuid,
+            'name'              => $this->name,
+            'apiKey'            => $this->apiKey,
+            'enrollmentToken'   => $this->enrollmentToken
+        ];
     }
 
     public function save(): bool
