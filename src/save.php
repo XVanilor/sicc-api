@@ -37,4 +37,4 @@ $crate->save();
 // Refresh entity from database
 $crate = Crate::get($crate->uuid);
 
-return Api::response(200, $crate->toJson());
+return Api::response(200, ["success" => true, "data" => $crate->toJson()]);
