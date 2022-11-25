@@ -8,7 +8,7 @@ use PDO;
 class DB extends PDO
 {
 
-    public const DEFAULT_FILE = "siccapi.db";
+    public const DEFAULT_FILE = "../siccapi.db";
 
     private static ?DB $_instance = null;
 
