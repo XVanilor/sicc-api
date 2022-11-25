@@ -20,7 +20,7 @@ class Api
 
     public static function error(string $errmsg): bool
     {
-        return self::response(500, ['error' => $errmsg]);
+        return self::response(500, ["success" => false, 'data' => $errmsg]);
     }
 
     private static function get_status_text(int $code = 200): string

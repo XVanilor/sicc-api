@@ -22,4 +22,21 @@ abstract class Config
         return $code === $res[0]["value"];
     }
 
+    public static function getPIN(): string
+    {
+
+        $db = DB::instance();
+        $stmt = $db->prepare("SELECT value FROM config WHERE name = :name");
+        $stmt->bindValue(":name", "pinCode", SQLITE3_TEXT);
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+
+        if(empty($res))
+        {
+            throw new \RuntimeException("Unable to retrieve pin code. Please contact your administrator");
+        }
+
+        return $res[0]["value"];
+    }
+
 }
