@@ -10,7 +10,7 @@ use Vanilor\SiccApi\Utils\Api;
 use Vanilor\SiccApi\Utils\User;
 use Vanilor\SiccApi\Utils\Token;
 
-if($_SERVER['REQUEST_METHOD'] !== "POST")
+if($_SERVER['REQUEST_METHOD'] !== "GET")
 {
     return Api::response(405, ["success" => false, ["data" => "Method Not Allowed"]]);
 }
