@@ -4,11 +4,13 @@ require __DIR__ . '/../vendor/autoload.php';
 include_once "Utils/Api.php";
 include_once "Utils/Crate.php";
 include_once "Utils/User.php";
+include_once "Utils/Config.php";
 
 use Ramsey\Uuid\Uuid;
 use Vanilor\SiccApi\Utils\Api;
 use Vanilor\SiccApi\Utils\Token;
 use Vanilor\SiccApi\Utils\User;
+use Vanilor\SiccApi\Utils\Config;
 
 if ($_SERVER['REQUEST_METHOD'] !== "POST")
     exit();
@@ -21,7 +23,19 @@ if (!isset($enrollmentToken) || !is_string($enrollmentToken) || !Uuid::isValid($
     !User::exists($enrollmentToken, Token::ENROLLMENT_TOKEN)
 )
 {
-    return Api::response(401, ["success" => false, "data" => "Invalid enrollment token"]);
+    return Api::response(401, ["success" => false, "data" => "Invalid enrollment token. Please contact you app administrator in case of an error"]);
+}
+
+try {
+    if(!isset($body["pinCode"]) || !Config::isVerificationCodeValid($body["pinCode"]))
+    {
+        return Api::response(401, ["success" => false, "data" => "Invalid PIN code"]);
+    }
+}
+catch (RuntimeException $e)
+{
+    echo $e->getMessage();
+    return Api::error($e->getMessage());
 }
 
 $user = [
