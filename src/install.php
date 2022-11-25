@@ -8,7 +8,7 @@ use Ramsey\Uuid\Uuid;
 use Vanilor\SiccApi\Utils\Api;
 use Vanilor\SiccApi\Utils\DB;
 
-$dbPath = "siccapi.db";
+$dbPath = "../siccapi.db";
 if(is_file($dbPath))
 {
     return Api::error("Database already exists");
