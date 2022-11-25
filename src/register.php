@@ -10,18 +10,18 @@ use Vanilor\SiccApi\Utils\Api;
 use Vanilor\SiccApi\Utils\Token;
 use Vanilor\SiccApi\Utils\User;
 
-if ($_SERVER['REQUEST_METHOD'] !== "POST")
-    exit();
+if($_SERVER['REQUEST_METHOD'] !== "POST")
+{
+    return Api::response(405, ["success" => false, ["data" => "Method Not Allowed"]]);
+}
 
 $body = json_decode(file_get_contents('php://input'), true);
 $apiKey = $_SERVER["HTTP_X_API_TOKEN"] ?? null;
-
 if (!isset($apiKey) || !is_string($apiKey) || !Uuid::isValid($apiKey) ||
-    $body === null ||
     !User::exists($apiKey, Token::API_KEY)
 )
 {
-    return Api::response(401, ["success" => false, "data" => "Invalid enrollment token"]);
+    return Api::response(401, ["success" => false, "data" => "Invalid API token"]);
 }
 
 $user = [
