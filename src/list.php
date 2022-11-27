@@ -7,6 +7,7 @@ include_once "Utils/User.php";
 
 use Ramsey\Uuid\Uuid;
 use Vanilor\SiccApi\Utils\Api;
+use Vanilor\SiccApi\Utils\Crate;
 use Vanilor\SiccApi\Utils\User;
 use Vanilor\SiccApi\Utils\Token;
 
