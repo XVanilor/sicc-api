@@ -1,94 +1,30 @@
 <?php
 
+namespace Vanilor\SiccApi\Utils;
+
 include_once 'DB.php';
 
+use PDOException;
 use Ramsey\Uuid\Uuid;
-use Vanilor\SiccApi\Utils\Api;
-use Vanilor\SiccApi\Utils\DB;
-
-class Item
-{
-
-    public string $uuid;
-    public string $name;
-    private int $quantity;
-
-    public function __construct(string $name)
-    {
-        $this->uuid = Uuid::uuid4();
-        $this->name = $name;
-        $this->setQuantity(0);
-    }
-
-    /**
-     * @param int $quantity
-     */
-    public function setQuantity(int $quantity): void
-    {
-        if ($quantity < 0)
-            $quantity = 0;
-        $this->quantity = $quantity;
-    }
-
-    public function getQuantity(): int
-    {
-        return $this->quantity;
-    }
-
-    public function delete(): bool
-    {
-        try {
-            $db = DB::instance();
-            $stmt = $db->prepare("DELETE FROM crate_item WHERE uuid = :uuid");
-            $stmt->bindValue(":uuid", $this->uuid, SQLITE3_TEXT);
-            $stmt->execute();
-
-            return true;
-        } catch (PDOException $e)
-        {
-            return false;
-        }
-    }
-
-    public function toJson(): array
-    {
-        return [
-            "uuid" => $this->uuid,
-            "name" => $this->name,
-            "quantity" => $this->getQuantity()
-        ];
-    }
-
-    public static function fromJson(array $json): ?Item
-    {
-        if (
-            !isset($json["uuid"]) || !is_string($json["uuid"]) || !Uuid::isValid($json['uuid']) ||
-            !isset($json["name"]) || !is_string($json["name"]) ||
-            !isset($json['quantity']) || !is_numeric($json['quantity'])
-        ) {
-            return null;
-        }
-
-        $item = new self($json["name"]);
-        $item->uuid = $json["uuid"];
-        $item->setQuantity((int)$json["quantity"]);
-
-        return $item;
-    }
-}
 
 class Crate
 {
 
     public string $uuid;
     public string $name;
+    public ?string $parent_uuid;
     /** @var Item[] */
     public array $items;
+    /** @var Crate[] */
+    public array $crates;
 
     public function __construct()
     {
         $this->uuid = Uuid::uuid4();
+        $this->name = "";
+        $this->parent_uuid = null;
         $this->items = [];
+        $this->crates = [];
     }
 
     public static function fromJson(array $json): ?Crate
@@ -96,7 +32,8 @@ class Crate
         if (
             !isset($json["uuid"]) || !is_string($json["uuid"]) || !Uuid::isValid($json["uuid"]) ||
             !isset($json["name"]) || !is_string($json["name"]) ||
-            !isset($json["items"]) || !is_array($json["items"])
+            !isset($json["items"]) || !is_array($json["items"]) ||
+            !isset($json["crates"]) || !is_array($json["crates"])
         ) {
             return null;
         }
@@ -108,10 +45,19 @@ class Crate
             return null;
         }
 
+        $json["crates"] = array_map(function ($c) {
+            return Crate::fromJson($c);
+        }, $json["crates"]);
+        if (in_array(null, $json["items"], true)) {
+            return null;
+        }
+
         $crate = new self();
         $crate->uuid = $json["uuid"];
         $crate->name = $json["name"];
+        $crate->parent_uuid = $json["parent_uuid"] ?? null;
         $crate->items = $json["items"];
+        $crate->crates = $json["crates"];
 
         return $crate;
     }
@@ -121,7 +67,9 @@ class Crate
         return [
             "uuid" => $this->uuid,
             "name" => $this->name,
-            "items" => array_map(function (Item $item){ return $item->toJson(); }, $this->items)
+            "parent_uuid" => $this->parent_uuid,
+            "items" => array_map(function (Item $item){ return $item->toJson(); }, $this->items),
+            "crates" => array_map(function (Crate $crate){ return $crate->toJson(); }, $this->crates)
         ];
     }
 
@@ -130,22 +78,34 @@ class Crate
         $db = DB::instance();
 
         // Gather crate
-        $stmt = $db->prepare("SELECT uuid, name FROM crate WHERE uuid = :uuid");
+        $stmt = $db->prepare("SELECT uuid, name, parent_uuid FROM crate WHERE uuid = :uuid OR parent_uuid = :uuid");
         $stmt->bindValue(":uuid", $uuid, SQLITE3_TEXT);
         $stmt->execute();
-        $crateMeta = $stmt->fetchAll();
+        $cratesMeta = $stmt->fetchAll();
 
-        if(empty($crateMeta))
+        if(empty($cratesMeta))
             return null;
-        else
-            $crateMeta = $crateMeta[0];
 
-        $crate = new self();
-        $crate->uuid = $crateMeta["uuid"];
-        $crate->name = $crateMeta["name"];
+        $childrenCrates = [];
+        $mainCrate = new self();
+        foreach($cratesMeta as $meta)
+        {
+            if($uuid === $meta["uuid"])
+            {
+                $mainCrate->uuid = $meta["uuid"];
+                $mainCrate->name = $meta["name"];
+                $mainCrate->parent_uuid = $meta["parent_uuid"];
+            }
+            else
+            {
+              $childrenCrates[] = $meta['uuid'];
+            }
 
+        }
+
+        // Get crate's items
         $stmt = $db->prepare("SELECT uuid, name, quantity FROM crate_item WHERE crate_id = :uuid");
-        $stmt->bindValue(":uuid", $uuid, SQLITE3_TEXT);
+        $stmt->bindValue(":uuid", $mainCrate->uuid, SQLITE3_TEXT);
         $stmt->execute();
         $items = $stmt->fetchAll();
 
@@ -155,10 +115,16 @@ class Crate
             $item->uuid = $rawItem["uuid"];
             $item->setQuantity($rawItem["quantity"]);
 
-            $crate->items[] = $item;
+            $mainCrate->items[] = $item;
         }
 
-        return $crate;
+        // Get recursively children crates
+        foreach($childrenCrates as $uuid)
+        {
+            $mainCrate->crates[] = Crate::get($uuid);
+        }
+
+        return $mainCrate;
     }
 
     /**
@@ -169,48 +135,16 @@ class Crate
         $db = DB::instance();
 
         // Gather crate
-        $stmt = $db->prepare("SELECT uuid, name FROM crate");
+        $stmt = $db->prepare("SELECT uuid FROM crate WHERE parent_uuid IS NULL");
         $stmt->execute();
-        $cratesMeta = $stmt->fetchAll();
-
-        if(empty($cratesMeta))
-            return [];
+        $uuids = $stmt->fetchAll();
 
         $crates = [];
-        foreach($cratesMeta as $meta)
+        foreach($uuids as $uuid)
         {
-            $crate = new self();
-            $crate->uuid = $meta["uuid"];
-            $crate->name = $meta["name"];
-
-            $crates[$crate->uuid] = $crate;
+            $crates[] = Crate::get($uuid["uuid"]);
         }
-
-        $itemsToDelete = [];
-
-        $stmt = $db->prepare("SELECT uuid, name, crate_id, quantity FROM crate_item");
-        $stmt->execute();
-        $items = $stmt->fetchAll();
-
-        foreach($items as $rawItem)
-        {
-            $item = new Item($rawItem["name"]);
-            $item->uuid = $rawItem["uuid"];
-            $item->setQuantity($rawItem["quantity"]);
-
-            if(!isset($crates[$rawItem["crate_id"]]))
-            {
-                $itemsToDelete[] = $item;
-                continue;
-            }
-            $crates[$rawItem['crate_id']]->items[] = $item;
-        }
-
-        // Database auto-maintenance
-        foreach($itemsToDelete as $item)
-            $item->delete();
-
-        return array_values($crates);
+        return $crates;
     }
 
     public function save(): bool
@@ -220,10 +154,12 @@ class Crate
         try {
 
             $db->beginTransaction();
-            $stmt = $db->prepare("INSERT OR REPLACE INTO crate (uuid, name) 
-                                        VALUES(:uuid,:name)");
+            $stmt = $db->prepare("INSERT OR REPLACE INTO crate (uuid, name, parent_uuid) 
+                                        VALUES(:uuid,:name, :parent_uuid)");
             $stmt->bindValue(":uuid", substr($this->uuid, 0, 254), SQLITE3_TEXT);
             $stmt->bindValue(":name", substr($this->name, 0, 254), SQLITE3_TEXT);
+            if($this->parent_uuid !== null)
+                $stmt->bindValue(":parent_uuid", substr($this->parent_uuid, 0, 254), SQLITE3_TEXT);
             $stmt->execute();
 
             // Delete all old items in this crate from database
@@ -252,7 +188,7 @@ class Crate
         }
     }
 
-    public static function exists(string $uuid)
+    public static function exists(string $uuid): bool
     {
         $db = DB::instance();
         $stmt = $db->prepare("SELECT uuid FROM crate WHERE uuid = :uuid");

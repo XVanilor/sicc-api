@@ -18,6 +18,7 @@ $db = new DB($dbPath);
 $db->query("CREATE TABLE IF NOT EXISTS crate(
     uuid VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    parent_uuid TEXT DEFAULT NULL,
     created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP
 );");
@@ -30,17 +31,17 @@ $db->query("CREATE TABLE IF NOT EXISTS crate_item (
     updated_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP
 );");
 $db->query('CREATE TABLE user (
-    uuid             TEXT    NOT NULL                            constraint user_pk PRIMARY KEY,
-    name             TEXT    default NULL,
-    enrollment_token TEXT    default NULL                        constraint "user-enrollment_token" unique,
-    api_key          INTEGER DEFAULT NULL                        constraint "user-api_key" unique,
-    created_at       INTEGER default CURRENT_TIMESTAMP NOT NULL,
-    updated_at       INTEGER default CURRENT_TIMESTAMP not null
+    uuid             VARCHAR(255)    NOT NULL                            constraint user_pk PRIMARY KEY,
+    name             TEXT           DEFAULT NULL,
+    enrollment_token TEXT           DEFAULT NULL                        constraint "user-enrollment_token" unique,
+    api_key          INTEGER        DEFAULT NULL                        constraint "user-api_key" unique,
+    created_at       INTEGER        DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at       INTEGER        DEFAULT CURRENT_TIMESTAMP not null
 );');
 $db->query('CREATE TABLE config(
-    uuid  TEXT NOT NULL constraint config_pk PRIMARY KEY,
-    name  TEXT NOT NULL constraint "config-name-u" UNIQUE,
-    value TEXT NOT NULL
+    uuid  VARCHAR(255)  NOT NULL constraint config_pk PRIMARY KEY,
+    name  TEXT          NOT NULL constraint "config-name-u" UNIQUE,
+    value TEXT          NOT NULL
 );');
 
 // Insert admin API token
